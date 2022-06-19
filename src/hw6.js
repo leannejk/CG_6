@@ -44,7 +44,6 @@ const directionalLight = new THREE.DirectionalLight( 0xffffff, 0.7 );
 scene.add( directionalLight );
 
 
-
 // TODO: Spaceship
 // You should copy-paste the spaceship from the previous exercise here
 
@@ -193,7 +192,7 @@ earth.mesh.applyMatrix4(moveEarth)
 scene.add(earth.mesh)
 
 //bonus
-const planetGeo = new THREE.SphereGeometry(120,35,35)
+const planetGeo = new THREE.SphereGeometry(60,35,35)
 const planetMat = new THREE.MeshPhongMaterial({color: "pink", map: planetTexture });
 const planet = new THREE.Mesh(planetGeo, planetMat)
 planet.applyMatrix4(new THREE.Matrix4().makeTranslation(300,-400,200))
