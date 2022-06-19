@@ -16,7 +16,6 @@ function degrees_to_radians(degrees)
 
 
 // Here we load the cubemap and skymap, you may change it
-
 const loader = new THREE.CubeTextureLoader();
 const texture = loader.load([
   'src/skybox/right.png',
@@ -31,10 +30,12 @@ scene.background = texture;
 
 // TODO: Texture Loading
 // We usually do the texture loading before we start everything else, as it might take processing time
-const sphereLoader = new THREE.TextureLoader();
-const moonTexture = sphereLoader.load('src/textures/moon.jpg');
-const earthTexture = sphereLoader.load('src/textures/earth.jpg');
-const starTexture = sphereLoader.load('src/textures/star.jpg');
+const sphereLoader = new THREE.TextureLoader()
+const moonTexture = sphereLoader.load('src/textures/moon.jpg')
+const earthTexture = sphereLoader.load('src/textures/earth.jpg')
+const starTexture = sphereLoader.load('src/textures/star.jpg')
+const badstarTexture = sphereLoader.load('src/textures/badstar.jpg')
+const planetTexture = sphereLoader.load('src/textures/planet.jpg')
 
 
 // TODO: Add Lighting
@@ -58,6 +59,7 @@ const createMaterial = (material) => {
 
 
 const spaceship = new THREE.Group();
+
 
 // Constant geometries sizes
 const sizes = {}
@@ -86,8 +88,8 @@ head.geometry = new THREE.ConeGeometry(sizes.headRadius, sizes.headLength)
 head.mesh = new THREE.Mesh(head.geometry, head.material)
 const moveHeadMat = new THREE.Matrix4()
 moveHeadMat.makeTranslation(0,1.25,0)
-spaceship.add(head.mesh)
 head.mesh.applyMatrix4(moveHeadMat)
+hull.mesh.add(head.mesh)
 
 
 // Ship's wings (Two-sided mesh plane)
@@ -154,8 +156,14 @@ moveAllWindowsMat.makeTranslation(0,0,sizes.hullRadius);
 shipWindows.applyMatrix4(moveAllWindowsMat);
 
 hull.mesh.add(shipWindows)
-
+hull.mesh.applyMatrix4(new THREE.Matrix4().makeRotationY(degrees_to_radians(270)))
+hull.mesh.applyMatrix4(new THREE.Matrix4().makeRotationX(degrees_to_radians(90)))
+hull.mesh.applyMatrix4(new THREE.Matrix4().makeRotationY(degrees_to_radians(30)))
 scene.add(spaceship)
+hull.mesh.add( spotLight );
+spotLight.applyMatrix4(new THREE.Matrix4().makeTranslation(0,0,1))
+
+
 
 
 // TODO: Planets
@@ -163,6 +171,7 @@ scene.add(spaceship)
 // Planet (Sphere)
 const earthPosition = {x: 100, y: 5, z: 100}
 const moonPosition = {x: 0, y: 0, z: 0}
+const cameraStartPosition = {x: -4, y: 0, z: 0}
 
 const moon = {}
 moon.color = 0xffffff;
@@ -183,6 +192,17 @@ moveEarth.makeTranslation(earthPosition.x, earthPosition.y , earthPosition.z)
 earth.mesh.applyMatrix4(moveEarth)
 scene.add(earth.mesh)
 
+//bonus
+const planetGeo = new THREE.SphereGeometry(120,35,35)
+const planetMat = new THREE.MeshPhongMaterial({color: "pink", map: planetTexture });
+const planet = new THREE.Mesh(planetGeo, planetMat)
+planet.applyMatrix4(new THREE.Matrix4().makeTranslation(300,-400,200))
+scene.add(planet);
+
+const planet2 = new THREE.Mesh(planetGeo, planetMat)
+planet2.applyMatrix4(new THREE.Matrix4().makeTranslation(700,-400,200))
+scene.add(planet2);
+
 
 
 // TODO: Bezier Curves
@@ -193,32 +213,35 @@ const conrolPointA = new THREE.Vector3( 45,10,45 )
 const controlPointB = new THREE.Vector3( 50,0,50 )
 const controlPointC = new THREE.Vector3( 60,-10,60 )
 
-const curve1 = new THREE.QuadraticBezierCurve3(startPoint, conrolPointA, endPoint );
-const curve2 = new THREE.QuadraticBezierCurve3(startPoint, controlPointB, endPoint );
-const curve3 = new THREE.QuadraticBezierCurve3(startPoint, controlPointC, endPoint );
+const c1 = new THREE.QuadraticBezierCurve3(startPoint, conrolPointA, endPoint );
+const c2 = new THREE.QuadraticBezierCurve3(startPoint, controlPointB, endPoint );
+const c3 = new THREE.QuadraticBezierCurve3(startPoint, controlPointC, endPoint );
 
 const MAX_POINTS = 10000
-const curvePointsA = curve1.getPoints( MAX_POINTS );
-const curvePointsB = curve2.getPoints( MAX_POINTS );
-const curvePointsC = curve3.getPoints( MAX_POINTS );
+const curvePointsA = c1.getPoints( MAX_POINTS );
+const curvePointsB = c2.getPoints( MAX_POINTS );
+const curvePointsC = c3.getPoints( MAX_POINTS );
 var currPoints = curvePointsA;
 const curves = [curvePointsA, curvePointsB, curvePointsC];
 
 // TODO: Camera Settings
 // Set the camera following the spaceship here
+const cameraTarget = new THREE.Object3D()
 const cameraTranslate = new THREE.Matrix4();
-const cameraDist = 10;
+const cameraDist = 12;
 let rotation_Z = new THREE.Matrix4().makeRotationZ(degrees_to_radians(270))
+let rotation_Y = new THREE.Matrix4().makeRotationY(degrees_to_radians(-100))
+
 camera.applyMatrix4(rotation_Z)
 cameraTranslate.makeTranslation(0,0,cameraDist);
 camera.applyMatrix4(cameraTranslate)
 cameraTranslate.makeTranslation(0,0,-cameraDist);
-let rotation_Y = new THREE.Matrix4().makeRotationY(degrees_to_radians(-100))
 camera.applyMatrix4(rotation_Y)
 cameraTranslate.makeTranslation(0,0,cameraDist);
-const cameraLane = new THREE.QuadraticBezierCurve3(moon.position, moon.position.clone().add(earth.position.clone()).divide(new THREE.Vector3(2,2,2)), earth.position );
+
+const vector2 = new THREE.Vector3(2,2,2)
+const cameraLane = new THREE.QuadraticBezierCurve3(cameraStartPosition, moon.position.clone().add(earth.position.clone()).divide(vector2), earth.position );
 const axisPoints = cameraLane.getPoints(MAX_POINTS)
-const cameraTarget = new THREE.Object3D()
 
 scene.add(cameraTarget)
 cameraTarget.add(camera)
@@ -226,22 +249,30 @@ cameraTarget.add(camera)
 
 // TODO: Add collectible stars
 const starMat = new THREE.MeshPhongMaterial({color: "yellow", map: starTexture });
+const batstarMat = new THREE.MeshPhongMaterial({color: "red", map: badstarTexture });
 const starGeo = new THREE.DodecahedronGeometry(0.6)
-const star = new THREE.Mesh(starGeo,starMat)
+const GoodStar = new THREE.Mesh(starGeo,starMat)
+const BadStar = new THREE.Mesh(starGeo, batstarMat)
 
-function Star(curve, t, obj) {
+function Star(curve, t, obj, is_good) {
 	this.curve = curve;
 	this.t = t;
 	this.obj = obj
 	this.claimed = false;
+	this.is_good = is_good
 }
 
 const NUM_STARS = 5
-function addStarsToScene() {
+var stars = [];
+
+function addGoodStarsToScene() {
     for (var i = 0; i < NUM_STARS ; i++){
         let curveIndex = Math.floor(Math.random() * 3);
         let tValue = Math.floor(Math.random() * MAX_POINTS);
-		let newStar = new Star(curveIndex,tValue, star.clone())
+		if(tValue <= 2){
+			tValue++
+		}
+		let newStar = new Star(curveIndex,tValue, GoodStar.clone(), true)
         stars.push(newStar)
 		let pos = curves[curveIndex][tValue]
         newStar.obj.applyMatrix4(new THREE.Matrix4().makeTranslation(pos.x,pos.y,pos.z))
@@ -249,8 +280,24 @@ function addStarsToScene() {
     }
 }
 
-var stars = [];
-addStarsToScene();
+//bonus bad stars
+function addBadStarsToScene() {
+    for (var i = 0; i < NUM_STARS - 3 ; i++){
+        let curveIndex = Math.floor(Math.random() * 3);
+        let tValue = Math.floor(Math.random() * MAX_POINTS);
+		if(tValue == 0){
+			tValue++
+		}
+		let newStar = new Star(curveIndex,tValue, BadStar.clone(), false)
+        stars.push(newStar)
+		let pos = curves[curveIndex][tValue]
+        newStar.obj.applyMatrix4(new THREE.Matrix4().makeTranslation(pos.x,pos.y,pos.z))
+        scene.add(newStar.obj)
+    }
+}
+
+addGoodStarsToScene();
+addBadStarsToScene()
 
 // TODO: Add keyboard event
 const INITIAL_CURVE_INDEX = 1
@@ -258,16 +305,30 @@ const INITIAL_CURVE_INDEX = 1
 var curCurveIndex = INITIAL_CURVE_INDEX;
 // We wrote some of the function for you
 const handle_keydown = (e) => {
-	if(e.code == 'ArrowLeft'){
+	// bonus speed
+	if (e.keyCode == '38') {
+        GameData.speed+=100
+		if (GameData.speed > 2000){
+			GameData.speed = 2000
+		}
+    }
+    else if (e.keyCode == '40') {
+        GameData.speed-=50
+		if(GameData.speed <= 0){
+			GameData.speed = 50
+		}
+    }
+    else if (e.keyCode == '37') {
 		curCurveIndex = Math.max(0,(curCurveIndex - 1));
-	} else if (e.code == 'ArrowRight'){
+    }
+    else if (e.keyCode == '39') {
 		curCurveIndex = Math.min(2,(curCurveIndex + 1));
-	} 
+    }
+
 	currPoints = curves[curCurveIndex]
 }
+
 document.addEventListener('keydown', handle_keydown);
-
-
 
 let GameData = {
 	score: 0,
@@ -281,7 +342,11 @@ let GameData = {
 const updateStars = (star) => {
 	if (star.curve == curCurveIndex && star.t <= GameData.pos + 50 && star.t >= GameData.pos - 50 && !star.claimed){
 		star.claimed = true;
-		GameData.score++;
+		if (star.is_good){
+			GameData.score++;
+		} else {
+			GameData.score--;
+		}
 		scene.remove(star.obj);
 	}
 
@@ -315,7 +380,6 @@ function animate() {
 		// TODO: Animation for the spaceship position
 		let hullPosition = hull.mesh.position
 		hull.mesh.applyMatrix4(new THREE.Matrix4().makeTranslation(-hullPosition.x,-hullPosition.y,-hullPosition.z))
-
 		hull.mesh.applyMatrix4(new THREE.Matrix4().makeTranslation(currPoints[GameData.pos].x,currPoints[GameData.pos].y,currPoints[GameData.pos].z))
 		let targetPosition = cameraTarget.position
 		cameraTarget.applyMatrix4(new THREE.Matrix4().makeTranslation(-targetPosition.x,-targetPosition.y,-targetPosition.z))
